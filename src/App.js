@@ -1,26 +1,22 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import firebase from './firebase';
+import ReactDOM from 'react-dom';
+import LoggedIn from './LoggedIn';
+import Login from './Login';
+import {Router, Route, IndexRoute} from 'react-router';
 
 class App extends Component {
+  constructor() {
+    super();
+  }
+
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
+      <Router>
+        <IndexRoute component={Login}/>
+        <Route path="/loggedIn" component={LoggedIn}/>
+        // <Route path="/loggedIn" render={ props => <LoggedIn {...props} />}
+      </Router>
     );
   }
 }
