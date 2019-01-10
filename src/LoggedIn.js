@@ -6,11 +6,12 @@ import Login from './Login';
 class LoggedIn extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      email: this.props.email,
-    };
+
     const user = firebase.auth().currentUser;
+
     this.currentUser = {};
+    this.logOut = this.logOut.bind(this);
+
     if (user != null) {
       this.currentUser.name = user.displayName;
       this.currentUser.email = user.email;
@@ -20,12 +21,13 @@ class LoggedIn extends Component {
     }
   }
 
-  logout(e) {
+  logOut(e) {
+    const logOut = this.props.logOut;
     e.preventDefault();
     firebase.auth().signOut()
       .then(user => {
         console.log("Logging out");
-        ReactDOM.render(<Login />, document.getElementById('root'));
+        logOut();
       })
       .catch(function(error) {
         console.log(`ERROR: ${error}`);
@@ -33,9 +35,9 @@ class LoggedIn extends Component {
   }
 
   render() {
-    const u = this.currentUser;
+    const user = this.currentUser;
     const userDetails = Object.keys(this.currentUser).map(function(key) {
-      return <div><p>{key}: {u[key]}</p></div>
+      return <div><p>{key}: {user[key]}</p></div>
     });
 
     return (
@@ -45,7 +47,7 @@ class LoggedIn extends Component {
           <p>Welcome {this.currentUser.email}!</p>
         </div>
         {userDetails}
-        <button id="Logout" onClick={this.logout}>Logout</button>
+        <button id="logOut" onClick={this.logOut}>Log Out</button>
       </div>
     </div>
     );
