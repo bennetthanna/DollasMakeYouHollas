@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
-import firebase from './firebase';
-import ReactDOM from 'react-dom';
 import LoggedIn from './LoggedIn';
 import Login from './Login';
-import {Router, Route, IndexRoute} from 'react-router';
 
 class App extends Component {
   constructor(props) {
@@ -27,7 +24,7 @@ class App extends Component {
     const isLoggedIn = this.state.isLoggedIn;
     const logIn = this.logIn;
     const logOut = this.logOut;
-    
+
     return (
       <div>{ isLoggedIn ? <LoggedIn logOut={logOut}/> : <Login logIn={logIn}/> }</div>
     );

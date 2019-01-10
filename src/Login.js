@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 import firebase from './firebase';
-import ReactDOM from 'react-dom';
-import LoggedIn from './LoggedIn';
-import { Redirect } from 'react-router-dom'
-import './Login.css';
+import './style.css';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { fab } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+
+library.add(fab);
 
 class Login extends Component {
   constructor(props) {
@@ -33,42 +34,34 @@ class Login extends Component {
     e.preventDefault();
     firebase.auth().signInWithEmailAndPassword(this.state.email, this.state.password)
       .then(user => {
-        console.log("You're logged in: %j", user);
         logIn();
       })
-      .catch(function(error) {
-        console.log(`ERROR: ${error}`);
-        if (error.code === 'auth/wrong-password') {
-          alert('Wrong password');
-        }
+      .catch(error => {
+        alert(`ERROR: ${error}`);
       });
   }
 
   signInWithGoogle(e) {
     const logIn = this.logIn;
     e.preventDefault();
-    console.log('SIGN IN WITH GOOGLE');
     const googleProvider = new firebase.auth.GoogleAuthProvider();
     firebase.auth().signInWithPopup(googleProvider)
       .then(function(result) {
-        console.log(result);
         logIn();
-      }).catch(function (error) {
-        console.log(error);
+      }).catch(error => {
+        alert(`ERROR: ${error}`);
       });
   }
 
   signUp(e) {
     const logIn = this.logIn;
     e.preventDefault();
-    console.log('SIGN UP');
     firebase.auth().createUserWithEmailAndPassword(this.state.email, this.state.password)
       .then(res => {
-        console.log(res);
         logIn();
       })
-      .catch(err => {
-        console.log(err);
+      .catch(error => {
+        alert(`ERROR: ${error}`);
       });
   }
 
@@ -88,7 +81,7 @@ class Login extends Component {
           </div>
           <button id="signIn" onClick={this.signInWithEmailAndPassword}>Sign In</button>
           <button id="signUp" onClick={this.signUp}>Sign Up</button>
-          <button id="signInWithGoogle" onClick={this.signInWithGoogle}><FontAwesomeIcon icon="fab fa-google"/>Sign In With Google</button>
+          <button id="signInWithGoogle" onClick={this.signInWithGoogle}><FontAwesomeIcon className="icon" icon={['fab', 'google']} />Sign In With Google</button>
         </form>
       </div>
     </div>

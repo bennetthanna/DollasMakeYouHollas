@@ -1,7 +1,5 @@
 import React, { Component } from 'react';
 import firebase from './firebase.js';
-import ReactDOM from 'react-dom';
-import Login from './Login';
 
 class LoggedIn extends Component {
   constructor(props) {
@@ -26,11 +24,10 @@ class LoggedIn extends Component {
     e.preventDefault();
     firebase.auth().signOut()
       .then(user => {
-        console.log("Logging out");
         logOut();
       })
-      .catch(function(error) {
-        console.log(`ERROR: ${error}`);
+      .catch(error => {
+        alert(`ERROR: ${error}`);
       });
   }
 
