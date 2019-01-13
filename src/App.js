@@ -1,26 +1,32 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import LoggedIn from './LoggedIn';
+import Login from './Login';
 
 class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      isLoggedIn: false
+    }
+    this.logIn = this.logIn.bind(this);
+    this.logOut = this.logOut.bind(this);
+  }
+
+  logIn() {
+    this.setState({ isLoggedIn: true });
+  }
+
+  logOut() {
+    this.setState({ isLoggedIn: false });
+  }
+
   render() {
+    const isLoggedIn = this.state.isLoggedIn;
+    const logIn = this.logIn;
+    const logOut = this.logOut;
+
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
+      <div>{ isLoggedIn ? <LoggedIn logOut={logOut}/> : <Login logIn={logIn}/> }</div>
     );
   }
 }
