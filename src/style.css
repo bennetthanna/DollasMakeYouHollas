@@ -32,3 +32,15 @@ button:hover {
 .icon {
 	margin-right: 20px;
 }
+
+.logOutButtonContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logOutButton {
+  width: 90%;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
