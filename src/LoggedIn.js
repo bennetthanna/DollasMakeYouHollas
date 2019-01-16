@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import firebase from './firebase.js';
 import uuid from 'uuid/v4';
 import { animals, adjectives, verbs, nouns, exclamations } from './randomWords';
+import _ from 'lodash';
 
 class LoggedIn extends Component {
   constructor(props) {
@@ -10,7 +11,10 @@ class LoggedIn extends Component {
     this.state = {
       isLoaded: false,
       notes: { },
-      currentNote: null
+      currentNote: null,
+      selectedFile: null,
+      displayedImage: 0,
+      uploadProgress: 0
     }
 
     const user = firebase.auth().currentUser;
@@ -21,6 +25,9 @@ class LoggedIn extends Component {
     this.updateNote = this.updateNote.bind(this);
     this.deleteNote = this.deleteNote.bind(this);
     this.selectNote = this.selectNote.bind(this);
+    this.attachFile = this.attachFile.bind(this);
+    this.nextImage = this.nextImage.bind(this);
+    this.previousImage = this.previousImage.bind(this);
 
     if (user != null) {
       this.currentUser.name = user.displayName;
@@ -59,7 +66,7 @@ class LoggedIn extends Component {
 
   generateNote() {
     const title = `The ${this.generateRandomWord(adjectives)} ${this.generateRandomWord(animals)}`;
-    const body = `${title} ${this.generateRandomWord(verbs)} the ${this.generateRandomWord(nouns)} and exclaimed "${this.generateRandomWord(exclamations)}"!`;
+    const body = `${title} ${this.generateRandomWord(verbs)} the ${this.generateRandomWord(nouns)} and exclaimed "${this.generateRandomWord(exclamations)}!"`;
     return { title, body };
   }
 
@@ -67,9 +74,9 @@ class LoggedIn extends Component {
     return words[Math.floor(Math.random() * Math.floor(words.length))];
   }
 
-  updateNote(event, noteId) {
+  updateNote(event, noteId, params) {
     event.preventDefault();
-    firebase.database().ref(`notes/${noteId}`).update(this.generateNote());
+    firebase.database().ref(`notes/${noteId}`).update(params || this.generateNote());
   }
 
   deleteNote(event, noteId) {
@@ -83,7 +90,35 @@ class LoggedIn extends Component {
 
   selectNote(event, noteId) {
     event.preventDefault();
-    this.setState({ currentNote: noteId });
+    this.setState({ currentNote: noteId, displayedImage: 0 });
+  }
+
+  attachFile(event, noteId) {
+    event.preventDefault();
+    const rootReference = firebase.storage().ref();
+    const fileName = _.get(event.target, 'files[0].name');
+    this.setState({ selectedFile: fileName });
+    const fileReference = rootReference.child(`${noteId}/${fileName}`);
+    const uploadTask = fileReference.put(event.target.files[0]);
+    uploadTask.on('state_changed', {
+      'next': (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        this.setState({ uploadProgress: Math.round(progress) });
+      },
+      'error': (error) => {
+        alert(`ERROR: ${error}`);
+      },
+      'complete': () => {
+        this.setState({ selectedFile: null, uploadProgress: 0 });
+        rootReference.child(`${noteId}/${fileName}`).getDownloadURL()
+          .then(fileUrl => {
+            let attachedFiles = this.state.notes[noteId].files;
+            attachedFiles = attachedFiles ? _.concat(attachedFiles, [fileUrl]) : [fileUrl];
+            this.updateNote(event, noteId, { files: attachedFiles });
+          })
+          .catch(error => alert(`ERROR: ${error}`));
+      }
+    });
   }
 
   renderList() {
@@ -103,9 +138,56 @@ class LoggedIn extends Component {
     );
   };
 
+  nextImage(event, numImages) {
+    const displayedImage = this.state.displayedImage;
+    const nextImage = (displayedImage + 1) % numImages;
+    this.setState({ displayedImage: nextImage });
+  }
+
+  previousImage(event, numImages) {
+    const displayedImage = this.state.displayedImage;
+    const previousImage = (((displayedImage - 1) % numImages) + numImages) % numImages;
+    this.setState({ displayedImage: previousImage });
+  }
+
+  renderFiles() {
+    const currentNoteId = this.state.currentNote;
+    const attachedFiles = this.state.notes[currentNoteId].files;
+    const displayedImage = this.state.displayedImage;
+    const numImages = attachedFiles.length;
+
+    return (
+      <div id="attachedImages" className="carousel slide" data-ride="carousel">
+        <div className="carousel-inner">
+          {attachedFiles.map((file, index) => {
+            return (
+              <div key={index} className={displayedImage === index ? 'carousel-item active' : 'carousel-item'}>
+                <img src={file} className="d-block w-100" alt="{index}"></img>
+              </div>
+            )
+          })}
+        </div>
+        <button className="carousel-control-prev" onClick={(event) => this.previousImage(event, numImages)}>
+          <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span className="sr-only">Previous</span>
+        </button>
+        <button className="carousel-control-next" data-slide="next" onClick={(event) => this.nextImage(event, numImages)}>
+          <span className="carousel-control-next-icon" aria-hidden="true"></span>
+          <span className="sr-only">Next</span>
+        </button>
+      </div>
+    );
+  };
+
   render() {
     const currentNoteId = this.state.currentNote;
     const currentNote = this.state.notes[currentNoteId];
+    const selectedFile = this.state.selectedFile;
+    const uploadProgress = this.state.uploadProgress;
+
+    const progressBar = {
+      width: `${uploadProgress}%`
+    };
 
     return (
       <div className="row">
@@ -129,6 +211,14 @@ class LoggedIn extends Component {
         <div className="card-body">
           <h5 className="card-title">{ this.state.isLoaded ? `${currentNote.title}` : null }</h5>
           <p className="card-text">{ this.state.isLoaded ? `${currentNote.body}` : null }</p>
+          <div className="custom-file">
+            <input type="file" className="custom-file-input" id="attachFile" onChange={(event) => this.attachFile(event, currentNoteId)} required></input>
+            <label className="custom-file-label" htmlFor="attachFile">{ selectedFile || 'Choose file...' }</label>
+            <div className="progress">
+              <div className="progress-bar progress-bar-striped bg-info" style={progressBar}></div>
+            </div>
+          </div>
+          { this.state.isLoaded && currentNote.files ? this.renderFiles() : null }
         </div>
       </div>
       <div className="card w-100 logOutButtonContainer">
