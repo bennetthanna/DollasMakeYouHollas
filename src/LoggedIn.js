@@ -8,16 +8,17 @@ class LoggedIn extends Component {
   constructor(props) {
     super(props);
 
+    const user = firebase.auth().currentUser;
+
     this.state = {
       isLoaded: false,
       notes: { },
       currentNote: null,
       selectedFile: null,
       displayedImage: 0,
-      uploadProgress: 0
+      uploadProgress: 0,
+      currentUser: user.uid
     }
-
-    const user = firebase.auth().currentUser;
 
     this.currentUser = {};
     this.logOut = this.logOut.bind(this);
@@ -28,18 +29,14 @@ class LoggedIn extends Component {
     this.attachFile = this.attachFile.bind(this);
     this.nextImage = this.nextImage.bind(this);
     this.previousImage = this.previousImage.bind(this);
-
-    if (user != null) {
-      this.currentUser.name = user.displayName;
-      this.currentUser.email = user.email;
-      this.currentUser.photoUrl = user.photoURL;
-      this.currentUser.emailVerified = user.emailVerified;
-      this.currentUser.uid = user.uid; 
-    }
   }
 
   componentDidMount() {
-    firebase.database().ref('notes/').on('value', snapShot => {
+    const currentUser = this.state.currentUser;
+    firebase.database().ref(`${currentUser}/`).on('value', snapShot => {
+      if (_.isNil(snapShot.val())) {
+        return;
+      }
       const first = Object.keys(snapShot.val())[0];
       const currentNote = this.state.currentNote || first;
       this.setState({ isLoaded: true, notes: snapShot.val(), currentNote });
@@ -59,8 +56,9 @@ class LoggedIn extends Component {
   }
 
   createNote(event) {
+    const currentUser = this.state.currentUser;
     const id = uuid();
-    firebase.database().ref(`notes/${id}`).set(this.generateNote());
+    firebase.database().ref(`${currentUser}/${id}`).set(this.generateNote());
     this.setState({ currentNote: id });
   }
 
@@ -76,12 +74,14 @@ class LoggedIn extends Component {
 
   updateNote(event, noteId, params) {
     event.preventDefault();
-    firebase.database().ref(`notes/${noteId}`).update(params || this.generateNote());
+    const currentUser = this.state.currentUser;
+    firebase.database().ref(`${currentUser}/${noteId}`).update(params || this.generateNote());
   }
 
   deleteNote(event, noteId) {
     event.preventDefault();
-    firebase.database().ref(`notes/${noteId}`).remove();
+    const currentUser = this.state.currentUser;
+    firebase.database().ref(`${currentUser}/${noteId}`).remove();
     const notes = this.state.notes;
     delete notes[noteId];
     const first = Object.keys(notes)[0];
@@ -95,10 +95,11 @@ class LoggedIn extends Component {
 
   attachFile(event, noteId) {
     event.preventDefault();
+    const currentUser = this.state.currentUser;
     const rootReference = firebase.storage().ref();
     const fileName = _.get(event.target, 'files[0].name');
     this.setState({ selectedFile: fileName });
-    const fileReference = rootReference.child(`${noteId}/${fileName}`);
+    const fileReference = rootReference.child(`${currentUser}/${noteId}/${fileName}`);
     const uploadTask = fileReference.put(event.target.files[0]);
     uploadTask.on('state_changed', {
       'next': (snapshot) => {
@@ -110,7 +111,7 @@ class LoggedIn extends Component {
       },
       'complete': () => {
         this.setState({ selectedFile: null, uploadProgress: 0 });
-        rootReference.child(`${noteId}/${fileName}`).getDownloadURL()
+        rootReference.child(`${currentUser}/${noteId}/${fileName}`).getDownloadURL()
           .then(fileUrl => {
             let attachedFiles = this.state.notes[noteId].files;
             attachedFiles = attachedFiles ? _.concat(attachedFiles, [fileUrl]) : [fileUrl];
@@ -150,6 +151,26 @@ class LoggedIn extends Component {
     this.setState({ displayedImage: previousImage });
   }
 
+  renderFileUpload() {
+    const currentNoteId = this.state.currentNote;
+    const uploadProgress = this.state.uploadProgress;
+    const selectedFile = this.state.selectedFile;
+
+    const progressBar = {
+      width: `${uploadProgress}%`
+    };
+
+    return (
+      <div className="custom-file">
+        <input type="file" className="custom-file-input" id="attachFile" onChange={(event) => this.attachFile(event, currentNoteId)} required></input>
+        <label className="custom-file-label" htmlFor="attachFile">{ selectedFile || 'Choose file...' }</label>
+        <div className="progress">
+          <div className="progress-bar progress-bar-striped bg-info" style={progressBar}></div>
+        </div>
+      </div>
+    )
+  }
+
   renderFiles() {
     const currentNoteId = this.state.currentNote;
     const attachedFiles = this.state.notes[currentNoteId].files;
@@ -182,12 +203,6 @@ class LoggedIn extends Component {
   render() {
     const currentNoteId = this.state.currentNote;
     const currentNote = this.state.notes[currentNoteId];
-    const selectedFile = this.state.selectedFile;
-    const uploadProgress = this.state.uploadProgress;
-
-    const progressBar = {
-      width: `${uploadProgress}%`
-    };
 
     return (
       <div className="row">
@@ -211,13 +226,7 @@ class LoggedIn extends Component {
         <div className="card-body">
           <h5 className="card-title">{ this.state.isLoaded ? `${currentNote.title}` : null }</h5>
           <p className="card-text">{ this.state.isLoaded ? `${currentNote.body}` : null }</p>
-          <div className="custom-file">
-            <input type="file" className="custom-file-input" id="attachFile" onChange={(event) => this.attachFile(event, currentNoteId)} required></input>
-            <label className="custom-file-label" htmlFor="attachFile">{ selectedFile || 'Choose file...' }</label>
-            <div className="progress">
-              <div className="progress-bar progress-bar-striped bg-info" style={progressBar}></div>
-            </div>
-          </div>
+          { this.state.isLoaded ? this.renderFileUpload() : null }
           { this.state.isLoaded && currentNote.files ? this.renderFiles() : null }
         </div>
       </div>
