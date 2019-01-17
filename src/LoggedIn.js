@@ -84,6 +84,10 @@ class LoggedIn extends Component {
     firebase.database().ref(`${currentUser}/${noteId}`).remove();
     const notes = this.state.notes;
     delete notes[noteId];
+    if (_.isEmpty(notes)) {
+      this.setState({ isLoaded: false, notes });
+      return;
+    }
     const first = Object.keys(notes)[0];
     this.setState({ notes, currentNote: first });
   }
